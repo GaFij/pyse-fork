@@ -2,7 +2,7 @@
 .idea/
 
 # Do not include any shell scripts
-*.sh
+#*.sh
 
 # Do not include the pointer_files directory.
 *pointer_files*

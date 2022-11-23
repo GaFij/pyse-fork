@@ -122,14 +122,19 @@ class FitsImage(DataAccessor):
         try:
             header = self.header
             if header['TELESCOP'] in ('LOFAR', 'AARTFAAC'):
-                freq_eff = header['RESTFRQ']
-                if 'RESTBW' in header:
-                    freq_bw = header['RESTBW']
-
+                if header['CTYPE3'] in ('FREQ', 'VOPT'):
+                    freq_eff = header['CRVAL3']
+                    freq_bw = header['CDELT3']
+                    print("GAUDI CTYPE3")
                 else:
-                    logger.warning("bandwidth header missing in image {},"
-                                   " setting to 1 MHz".format(self.url))
-                    freq_bw = 1e6
+                    freq_eff = header['RESTFRQ']
+                    if 'RESTBW' in header:
+                        freq_bw = header['RESTBW']
+
+                    else:
+                        logger.warning("bandwidth header missing in image {},"
+                                    " setting to 1 MHz".format(self.url))
+                        freq_bw = 1e6
             else:
                 if header['ctype3'] in ('FREQ', 'VOPT'):
                     freq_eff = header['crval3']
@@ -141,10 +146,13 @@ class FitsImage(DataAccessor):
                     freq_eff = header['restfreq']
                     freq_bw = 0.0
         except KeyError:
+            print("GAUDI KeyError")
             msg = "Frequency not specified in headers for {}".format(self.url)
             logger.error(msg)
             raise TypeError(msg)
 
+        print("GAUDI return")
+        
         return freq_eff, freq_bw
 
     def parse_beam(self):

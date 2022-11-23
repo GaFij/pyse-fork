@@ -780,7 +780,7 @@ class Detection(object):
         self.sig = paramset.sig
 
         try:
-            self._physical_coordinates()
+            # self._physical_coordinates()
         except RuntimeError:
             logger.warn("Physical coordinates failed at %f, %f" % (
                 self.x, self.y))
@@ -819,7 +819,7 @@ class Detection(object):
         self.gaussian = attrdict['gaussian']
 
         try:
-            self._physical_coordinates()
+            # self._physical_coordinates()
         except RuntimeError as e:
             logger.warn("Physical coordinates failed at %f, %f" % (
                 self.x, self.y))
