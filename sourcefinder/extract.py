@@ -780,7 +780,7 @@ class Detection(object):
         self.sig = paramset.sig
 
         try:
-            # self._physical_coordinates()
+            self._physical_coordinates()
         except RuntimeError:
             logger.warn("Physical coordinates failed at %f, %f" % (
                 self.x, self.y))
@@ -819,7 +819,7 @@ class Detection(object):
         self.gaussian = attrdict['gaussian']
 
         try:
-            # self._physical_coordinates()
+            self._physical_coordinates()
         except RuntimeError as e:
             logger.warn("Physical coordinates failed at %f, %f" % (
                 self.x, self.y))
@@ -842,6 +842,7 @@ class Detection(object):
         return str(self)
 
     def _physical_coordinates(self):
+        return True
         """Convert the pixel parameters for this object into something
         physical."""
 
@@ -1047,5 +1048,7 @@ class Detection(object):
             self.error_radius,
             self.gaussian,
             self.chisq,
-            self.reduced_chisq
+            self.reduced_chisq,
+            self.x,
+            self.y
         ]

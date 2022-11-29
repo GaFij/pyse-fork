@@ -37,6 +37,8 @@ from sourcefinder.utils import generate_result_maps
 from six import print_
 from dask.distributed import Client
 
+import time
+
 if __name__ == '__main__':
     client = Client()  #
 
@@ -69,18 +71,18 @@ def skymodel(sourcelist, ref_freq=73800000):
     """
     output = StringIO()
     print_(
-        u"#(Name, Type, Ra, Dec, I, Q, U, V, MajorAxis, MinorAxis, Orientation, "
+        u"#(Name, Type, Xind, Yind, I, Q, U, V, MajorAxis, MinorAxis, Orientation, "
         "ReferenceFrequency='60e6', SpectralIndex='[0.0]') = format",
         file=output)
     for source in sourcelist:
-        print_(u"%s, GAUSSIAN, %s, %s, %f, 0, 0, 0, %f, %f, %f, %f, [0]" % (
-            u"ra:%fdec:%f" % (source.ra, source.dec),
-            u"%fdeg" % (source.ra,),
-            u"%fdeg" % (source.dec,),
+        print_(u"%s, GAUSSIAN, %s, %s, %f, 0, 0, 0, %f, [0]" % ( #%f, %f, %f,
+            u"Xind:%fYind:%f" % (source.x, source.y),
+            u"%f" % (source.x,),
+            u"%f" % (source.y,),
             source.flux,
-            source.smaj_asec,
-            source.smin_asec,
-            source.theta_celes,
+            # source.smaj_asec,
+            # source.smin_asec,
+            # source.theta_celes,
             ref_freq
         ), file=output)
     return output.getvalue()
@@ -93,10 +95,10 @@ def csv(sourcelist):
     output = StringIO()
     print_(
         u"ra, ra_err, dec, dec_err, smaj, smaj_err, smin, smin_err, pa, pa_err, "
-        "int_flux, int_flux_err, pk_flux, pk_flux_err",
+        "int_flux, int_flux_err, pk_flux, pk_flux_err, x, y",
         file=output)
     for source in sourcelist:
-        print_(u"%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f" % (
+        print_(u"%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f" % (
             source.ra,
             source.ra.error,
             source.dec,
@@ -111,6 +113,37 @@ def csv(sourcelist):
             source.flux.error,
             source.peak,
             source.peak.error,
+            source.x,
+            source.y
+        ), file=output)
+    return output.getvalue()
+
+def csv_short(sourcelist):
+    """
+    Return a string containing a csv from the extracted sources.
+    """
+    output = StringIO()
+    print_(
+        u"int_flux, x, y",
+        file=output)
+    for source in sourcelist:
+        print_(u"%f, %f, %f" % ( #, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f" % (
+            # source.ra,
+            # source.ra.error,
+            # source.dec,
+            # source.dec.error,
+            # source.smaj_asec,
+            # source.smaj_asec.error,
+            # source.smin_asec,
+            # source.smin_asec.error,
+            # source.theta_celes,
+            # source.theta_celes.error,
+            source.flux,
+            # source.flux.error,
+            # source.peak,
+            # source.peak.error,
+            source.x,
+            source.y
         ), file=output)
     return output.getvalue()
 
@@ -132,6 +165,20 @@ def summary(filename, sourcelist):
         print_(u"Semi-minor axis (arcsec): %s" % (str(source.smin_asec)),
               file=output)
         print_(u"Position angle: %s" % (str(source.theta_celes)), file=output)
+        print_(u"Flux: %s" % (str(source.flux)), file=output)
+        print_(u"Peak: %s\n" % (str(source.peak)), file=output)
+    return output.getvalue()
+
+def summary_short(filename, sourcelist):
+    """
+    Return a string containing a human-readable summary of all sources in
+    sourcelist.
+    """
+    output = StringIO()
+    print_(u"** %s **\n" % (filename), file=output)
+    for source in sourcelist:
+        print_(u"X: %s, Y: %s" % (str(source.x), str(source.y)),
+              file=output)
         print_(u"Flux: %s" % (str(source.flux)), file=output)
         print_(u"Peak: %s\n" % (str(source.peak)), file=output)
     return output.getvalue()
@@ -180,6 +227,9 @@ def get_argparser():
                             default=None)
     extraction.add_argument('--ffbox', type=float, default=3.,
                             help="Forced fitting positional box size as a multiple of beam width.")
+
+    extraction.add_argument("--no-bg-noise", dest="no_bg_noise", action="store_true",
+                        help="assume zero background and no noise")
 
     # Arguments relating to output:
     output = parser.add_argument_group("Output")
@@ -348,11 +398,13 @@ def run_sourcefinder(files, options):
                         u"Thresholding with det = %f sigma, analysis = %f sigma" % (
                         options.detection, options.analysis))
 
+                print(f"no_bg_noise: {options.no_bg_noise}")
+
                 sr = imagedata.extract(
                     det=options.detection, anl=options.analysis,
                     labelled_data=labelled_data, labels=labels,
                     deblend_nthresh=options.deblend_thresholds,
-                    force_beam=options.force_beam
+                    force_beam=options.force_beam, no_bg_noise=options.no_bg_noise
                 )
 
         if options.regions:
@@ -389,8 +441,9 @@ def run_sourcefinder(files, options):
                     skymodelfile.write(skymodel(sr))
         if options.csv:
             with open(imagename + ".csv", 'w') as csvfile:
-                csvfile.write(csv(sr))
-                print_(summary(filename, sr), end=u' ', file=output)
+                csvfile.write(csv_short(sr))
+                print(f"Number of found sources: {len(sr)}")
+                # print_(summary_short(filename, sr), end=u' ', file=output)
     return output.getvalue()
 
 

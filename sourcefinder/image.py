@@ -25,7 +25,7 @@ try:
     import ndimage
 except ImportError:
     from scipy import ndimage
-    
+
 def gather(*args):
     return list(args)
 
@@ -415,7 +415,7 @@ class ImageData(object):
     ###########################################################################
 
     def extract(self, det, anl, noisemap=None, bgmap=None, labelled_data=None,
-                labels=None, deblend_nthresh=0, force_beam=False):
+                labels=None, deblend_nthresh=0, force_beam=False, no_bg_noise=False):
 
         """
         Kick off conventional (ie, RMS island finding) source extraction.
@@ -474,10 +474,16 @@ class ImageData(object):
         if labelled_data is not None and labelled_data.shape != self.data.shape:
             raise ValueError("Labelled map is wrong shape")
 
-        return self._pyse(
-            det * self.rmsmap, anl * self.rmsmap, deblend_nthresh, force_beam,
-            labelled_data=labelled_data, labels=labels
-        )
+        if no_bg_noise:
+            return self._pyse(
+                det * self.data, anl * self.data, deblend_nthresh, force_beam,
+                labelled_data=labelled_data, labels=labels
+            )
+        else:
+            return self._pyse(
+                det * self.rmsmap, anl * self.rmsmap, deblend_nthresh, force_beam,
+                labelled_data=labelled_data, labels=labels
+            )
 
     def reverse_se(self, det):
         """Run source extraction on the negative of this image.
@@ -976,12 +982,13 @@ class ImageData(object):
                 continue
             try:
                 det = extract.Detection(measurement, self, chunk=island.chunk)
-                if (det.ra.error == float('inf') or
-                        det.dec.error == float('inf')):
-                    logger.warn('Bad fit from blind extraction at pixel coords:'
-                                '%f %f - measurement discarded'
-                                '(increase fitting margin?)', det.x, det.y)
-                else:
+                # if (det.ra.error == float('inf') or
+                #         det.dec.error == float('inf')):
+                #     logger.warn('Bad fit from blind extraction at pixel coords:'
+                #                 '%f %f - measurement discarded'
+                #                 '(increase fitting margin?)', det.x, det.y)
+                # else:
+                if (det.x > 0 ) and (det.y > 0):
                     results.append(det)
             except RuntimeError as e:
                 logger.error("Island not processed; unphysical?")
@@ -993,6 +1000,7 @@ class ImageData(object):
 
 
         def is_usable(det):
+            return True
             # Check that both ends of each axis are usable; that is, that they
             # fall within an unmasked part of the image.
             # The axis will not likely fall exactly on a pixel number, so
