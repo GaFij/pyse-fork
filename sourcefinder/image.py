@@ -275,8 +275,11 @@ class ImageData(object):
                 rms = 0
                 mode = 0
             else:
-                chunk, sigma, median, num_clip_its = stats.sigma_clip(
-                    chunk.ravel())
+                # chunk, sigma, median, num_clip_its = stats.sigma_clip(
+                #     chunk.ravel())
+                sigma = numpy.std(chunk)
+                median = numpy.median(chunk)
+                num_clip_its = 1
                 if len(chunk) == 0 or not chunk.any():
                     rms = 0
                     mode = 0
