@@ -90,6 +90,8 @@ class ImageData(object):
         self.radius = radius
         self.residuals = residuals
 
+        self.enable_sigma_clip = True
+
     ###########################################################################
     #                                                                         #
     # Properties and attributes.                                              #
@@ -239,7 +241,7 @@ class ImageData(object):
         useful_data = da.from_array(self.data[useful_chunk[0]].data, chunks=(self.back_size_x, y_dim))
 
         mode_and_rms = useful_data.map_blocks(ImageData.compute_mode_and_rms_of_row_of_subimages,
-                                              y_dim,  self.back_size_y,
+                                              y_dim, self.back_size_y, self.enable_sigma_clip,
                                               dtype=numpy.complex64,
                                               chunks=(1, 1)).compute()
 
@@ -260,7 +262,7 @@ class ImageData(object):
         return { 'bg': mode_grid, 'rms': rms_grid,}
 
     @staticmethod
-    def compute_mode_and_rms_of_row_of_subimages(row_of_subimages, y_dim, back_size_y):
+    def compute_mode_and_rms_of_row_of_subimages(row_of_subimages, y_dim, back_size_y, enable_sigma_clip=True):
 
         # We set up a dedicated logging subchannel, as the sigmaclip loop
         # logging is very chatty:
@@ -275,11 +277,13 @@ class ImageData(object):
                 rms = 0
                 mode = 0
             else:
-                # chunk, sigma, median, num_clip_its = stats.sigma_clip(
-                #     chunk.ravel())
-                sigma = numpy.std(chunk)
-                median = numpy.median(chunk)
-                num_clip_its = 1
+                if enable_sigma_clip:
+                    chunk, sigma, median, num_clip_its = stats.sigma_clip(
+                        chunk.ravel())
+                else: #execute no clipping for when no background or noise is present
+                    sigma = numpy.std(chunk)
+                    median = numpy.median(chunk)
+                    num_clip_its = 0
                 if len(chunk) == 0 or not chunk.any():
                     rms = 0
                     mode = 0
@@ -418,7 +422,7 @@ class ImageData(object):
     ###########################################################################
 
     def extract(self, det, anl, noisemap=None, bgmap=None, labelled_data=None,
-                labels=None, deblend_nthresh=0, force_beam=False, no_bg_noise=False):
+                labels=None, deblend_nthresh=0, force_beam=False):
 
         """
         Kick off conventional (ie, RMS island finding) source extraction.
@@ -477,16 +481,10 @@ class ImageData(object):
         if labelled_data is not None and labelled_data.shape != self.data.shape:
             raise ValueError("Labelled map is wrong shape")
 
-        if no_bg_noise:
-            return self._pyse(
-                det * self.data, anl * self.data, deblend_nthresh, force_beam,
-                labelled_data=labelled_data, labels=labels
-            )
-        else:
-            return self._pyse(
-                det * self.rmsmap, anl * self.rmsmap, deblend_nthresh, force_beam,
-                labelled_data=labelled_data, labels=labels
-            )
+        return self._pyse(
+            det * self.rmsmap, anl * self.rmsmap, deblend_nthresh, force_beam,
+            labelled_data=labelled_data, labels=labels
+        )
 
     def reverse_se(self, det):
         """Run source extraction on the negative of this image.

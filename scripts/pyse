@@ -377,6 +377,9 @@ def run_sourcefinder(files, options):
         ff = open_accessor(filename, beam=beam, plane=0)
         imagedata = sourcefinder_image_from_accessor(ff, **configuration)
 
+        print(f"no_bg_noise: {options.no_bg_noise}")
+        imagedata.enable_sigma_clip = not options.no_bg_noise
+
         if options.mode == "fixed":
             sr = imagedata.fit_fixed_positions(options.fixed_coords,
                                                options.ffbox * max(
@@ -398,13 +401,11 @@ def run_sourcefinder(files, options):
                         u"Thresholding with det = %f sigma, analysis = %f sigma" % (
                         options.detection, options.analysis))
 
-                print(f"no_bg_noise: {options.no_bg_noise}")
-
                 sr = imagedata.extract(
                     det=options.detection, anl=options.analysis,
                     labelled_data=labelled_data, labels=labels,
                     deblend_nthresh=options.deblend_thresholds,
-                    force_beam=options.force_beam, no_bg_noise=options.no_bg_noise
+                    force_beam=options.force_beam
                 )
 
         if options.regions:

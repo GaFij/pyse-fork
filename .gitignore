@@ -3,6 +3,8 @@
 
 # Do not include any shell scripts
 #*.sh
+scripts/input/*
+scripts/results/*
 
 # Do not include the pointer_files directory.
 *pointer_files*
