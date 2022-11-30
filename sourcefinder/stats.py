@@ -12,12 +12,7 @@ from scipy.optimize import fsolve
 # CODE & NUMBER HANDLING ROUTINES
 #
 def find_true_std(sigma, clip_limit, clipped_std):
-    # if not sigma == 0:
     help1 = clip_limit/(sigma*numpy.sqrt(2))
-    # else:
-        # help1 = 3.4028237 * 10**30
-    # help1 = numpy.where(sigma>0, clip_limit/(sigma*numpy.sqrt(2),0))
-    # print(f"help1: {help1}")
     help2 = numpy.sqrt(2*numpy.pi)*erf(help1)
     return sigma**2*(help2-2*numpy.sqrt(2)*help1*numpy.exp(-help1**2))-clipped_std**2*help2
 
